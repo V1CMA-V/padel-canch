@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -12,41 +7,143 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id            String    @id
-  name          String
-  email         String    @unique
-  emailVerified Boolean
-  image         String?
-  createdAt     DateTime
-  updatedAt     DateTime
-  sessions      Session[]
-  accounts      Account[]
-  posts         Post[]
+// ─── Enums ──────────────────────────────────────────────────────
 
-  @@map("user")
+enum Role {
+  PLAYER
+  CLUB
+  ADMIN
 }
 
-model Post {
-  id        Int     @id @default(autoincrement())
-  title     String
-  content   String?
-  published Boolean @default(false)
-  authorId  String
-  author    User    @relation(fields: [authorId], references: [id])
+enum tournament_status {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+
+enum tournament_visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum category_gender {
+  MALE
+  FEMALE
+  MIXED
+  OPEN
+}
+
+enum category_status {
+  DRAFT
+  OPEN
+  CLOSED
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+
+enum registration_status {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  WAITLIST
+}
+
+enum team_status {
+  PENDING_PARTNER
+  ACTIVE
+  WITHDRAWN
+  DISQUALIFIED
+}
+
+enum team_invitation_status {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum phase_type {
+  GROUP_STAGE
+  KNOCKOUT
+  ROUND_ROBIN
+}
+
+enum phase_status {
+  DRAFT
+  PENDING
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+
+enum match_status {
+  PENDING
+  SCHEDULED
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+  WALKOVER
+}
+
+enum bracket_round_type {
+  ROUND_OF_32
+  ROUND_OF_16
+  QUARTERFINAL
+  SEMIFINAL
+  FINAL
+  THIRD_PLACE
+  CUSTOM
+}
+
+// ─── Better Auth models ─────────────────────────────────────────
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  role          Role     @default(PLAYER)
+  username      String?  @unique @db.VarChar(50)
+  phone         String?  @db.VarChar(30)
+  isActive      Boolean  @default(true) @map("is_active")
+
+  accounts Account[]
+  sessions Session[]
+
+  club                Club?
+  playerProfile       PlayerProfile?
+  captainedTeams      Team[]           @relation("TeamCaptain")
+  player1Teams        Team[]           @relation("TeamPlayer1")
+  player2Teams        Team[]           @relation("TeamPlayer2")
+  receivedInvitations TeamInvitation[] @relation("InvitedUser")
+  sentInvitations     TeamInvitation[] @relation("InvitedByUser")
+  registrations       Registration[]
+
+  @@index([role])
+  @@map("user")
 }
 
 model Session {
   id        String   @id
   expiresAt DateTime
   token     String   @unique
-  createdAt DateTime
+  createdAt DateTime @default(now())
   updatedAt DateTime
   ipAddress String?
   userAgent String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("session")
 }
 
@@ -55,7 +152,6 @@ model Account {
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -63,9 +159,11 @@ model Account {
   refreshTokenExpiresAt DateTime?
   scope                 String?
   password              String?
-  createdAt             DateTime
+  createdAt             DateTime  @default(now())
   updatedAt             DateTime
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("account")
 }
 
@@ -74,8 +172,323 @@ model Verification {
   identifier String
   value      String
   expiresAt  DateTime
-  createdAt  DateTime
+  createdAt  DateTime @default(now())
   updatedAt  DateTime
 
+  @@index([identifier])
   @@map("verification")
+}
+
+// ─── Domain models ──────────────────────────────────────────────
+
+model Club {
+  id          String   @id @default(uuid())
+  ownerUserId String   @unique @map("owner_user_id")
+  name        String   @db.VarChar(150)
+  slug        String   @unique @db.VarChar(160)
+  description String?
+  address     String?  @db.VarChar(255)
+  city        String?  @db.VarChar(100)
+  state       String?  @db.VarChar(100)
+  country     String?  @db.VarChar(100)
+  phone       String?  @db.VarChar(30)
+  website     String?  @db.VarChar(255)
+  logoUrl     String?  @map("logo_url")
+  isVerified  Boolean  @default(false) @map("is_verified")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  owner       User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  tournaments Tournament[]
+
+  @@index([city])
+  @@index([state])
+  @@index([country])
+  @@map("clubs")
+}
+
+model PlayerProfile {
+  id           String    @id @default(uuid())
+  userId       String    @unique @map("user_id")
+  dominantHand String?   @map("dominant_hand") @db.VarChar(20)
+  level        String?   @db.VarChar(50)
+  gender       String?   @db.VarChar(20)
+  birthDate    DateTime? @map("birth_date") @db.Date
+  city         String?   @db.VarChar(100)
+  state        String?   @db.VarChar(100)
+  country      String?   @db.VarChar(100)
+  bio          String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("player_profiles")
+}
+
+model Tournament {
+  id                  String                @id @default(uuid())
+  clubId              String                @map("club_id")
+  name                String                @db.VarChar(180)
+  slug                String                @unique @db.VarChar(190)
+  description         String?
+  venueName           String?               @map("venue_name") @db.VarChar(150)
+  venueAddress        String?               @map("venue_address") @db.VarChar(255)
+  city                String?               @db.VarChar(100)
+  state               String?               @db.VarChar(100)
+  country             String?               @db.VarChar(100)
+  startDate           DateTime              @map("start_date") @db.Date
+  endDate             DateTime              @map("end_date") @db.Date
+  registrationOpenAt  DateTime?             @map("registration_open_at")
+  registrationCloseAt DateTime?             @map("registration_close_at")
+  status              tournament_status     @default(DRAFT)
+  visibility          tournament_visibility @default(PUBLIC)
+  rules               String?
+  coverImageUrl       String?               @map("cover_image_url")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @default(now()) @updatedAt @map("updated_at")
+
+  club       Club       @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  categories Category[]
+
+  @@index([clubId])
+  @@index([status])
+  @@index([visibility])
+  @@index([startDate])
+  @@index([clubId, startDate])
+  @@map("tournaments")
+}
+
+model Category {
+  id              String          @id @default(uuid())
+  tournamentId    String          @map("tournament_id")
+  name            String          @db.VarChar(120)
+  slug            String?         @db.VarChar(140)
+  description     String?
+  gender          category_gender @default(OPEN)
+  level           String?         @db.VarChar(50)
+  minAge          Int?            @map("min_age")
+  maxAge          Int?            @map("max_age")
+  formatName      String?         @map("format_name") @db.VarChar(80)
+  maxTeams        Int?            @map("max_teams")
+  minTeams        Int?            @map("min_teams")
+  requiresPartner Boolean         @default(true) @map("requires_partner")
+  status          category_status @default(DRAFT)
+  registrationFee Decimal?        @default(0) @map("registration_fee") @db.Decimal(10, 2)
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @default(now()) @updatedAt @map("updated_at")
+
+  tournament    Tournament     @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teams         Team[]
+  registrations Registration[]
+  phases        Phase[]
+  matches       Match[]
+
+  @@unique([tournamentId, name])
+  @@index([tournamentId])
+  @@index([status])
+  @@map("categories")
+}
+
+model Team {
+  id            String      @id @default(uuid())
+  categoryId    String      @map("category_id")
+  captainUserId String      @map("captain_user_id")
+  player1UserId String      @map("player1_user_id")
+  player2UserId String?     @map("player2_user_id")
+  name          String?     @db.VarChar(180)
+  status        team_status @default(PENDING_PARTNER)
+  seed          Int?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at")
+
+  category     Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  captain      User             @relation("TeamCaptain", fields: [captainUserId], references: [id])
+  player1      User             @relation("TeamPlayer1", fields: [player1UserId], references: [id])
+  player2      User?            @relation("TeamPlayer2", fields: [player2UserId], references: [id])
+  invitations  TeamInvitation[]
+  registration Registration?
+  groupTeams   GroupTeam[]
+  matchesAsA   Match[]          @relation("MatchTeamA")
+  matchesAsB   Match[]          @relation("MatchTeamB")
+  wonMatches   Match[]          @relation("MatchWinner")
+  walkoverWins Match[]          @relation("MatchWalkoverWinner")
+
+  @@index([categoryId])
+  @@index([captainUserId])
+  @@index([player1UserId])
+  @@index([player2UserId])
+  @@map("teams")
+}
+
+model TeamInvitation {
+  id              String                 @id @default(uuid())
+  teamId          String                 @map("team_id")
+  invitedUserId   String                 @map("invited_user_id")
+  invitedByUserId String                 @map("invited_by_user_id")
+  status          team_invitation_status @default(PENDING)
+  expiresAt       DateTime?              @map("expires_at")
+  respondedAt     DateTime?              @map("responded_at")
+  createdAt       DateTime               @default(now()) @map("created_at")
+
+  team      Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  invited   User @relation("InvitedUser", fields: [invitedUserId], references: [id])
+  invitedBy User @relation("InvitedByUser", fields: [invitedByUserId], references: [id])
+
+  @@index([teamId])
+  @@index([invitedUserId])
+  @@index([status])
+  @@map("team_invitations")
+}
+
+model Registration {
+  id                 String              @id @default(uuid())
+  categoryId         String              @map("category_id")
+  teamId             String              @unique @map("team_id")
+  registeredByUserId String              @map("registered_by_user_id")
+  status             registration_status @default(PENDING)
+  paymentStatus      String?             @default("PENDING") @map("payment_status") @db.VarChar(30)
+  notes              String?
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @default(now()) @updatedAt @map("updated_at")
+
+  category     Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  registeredBy User     @relation(fields: [registeredByUserId], references: [id])
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@map("registrations")
+}
+
+model Phase {
+  id             String              @id @default(uuid())
+  categoryId     String              @map("category_id")
+  name           String              @db.VarChar(120)
+  type           phase_type
+  roundType      bracket_round_type? @map("round_type")
+  phaseOrder     Int                 @map("phase_order")
+  status         phase_status        @default(DRAFT)
+  qualifiesCount Int?                @map("qualifies_count")
+  isMainPhase    Boolean             @default(false) @map("is_main_phase")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @default(now()) @updatedAt @map("updated_at")
+
+  category         Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  groups           PhaseGroup[]
+  matches          Match[]
+  advancementsFrom PhaseAdvancement[] @relation("FromPhase")
+  advancementsTo   PhaseAdvancement[] @relation("ToPhase")
+
+  @@unique([categoryId, phaseOrder])
+  @@index([categoryId])
+  @@index([type])
+  @@index([phaseOrder])
+  @@map("phases")
+}
+
+model PhaseGroup {
+  id         String   @id @default(uuid())
+  phaseId    String   @map("phase_id")
+  name       String   @db.VarChar(50)
+  groupOrder Int      @map("group_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  phase              Phase              @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  groupTeams         GroupTeam[]
+  matches            Match[]
+  sourceAdvancements PhaseAdvancement[]
+
+  @@unique([phaseId, name])
+  @@unique([phaseId, groupOrder])
+  @@index([phaseId])
+  @@map("phase_groups")
+}
+
+model GroupTeam {
+  id      String   @id @default(uuid())
+  groupId String   @map("group_id")
+  teamId  String   @map("team_id")
+  addedAt DateTime @default(now()) @map("added_at")
+
+  group PhaseGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  team  Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, teamId])
+  @@index([groupId])
+  @@index([teamId])
+  @@map("group_teams")
+}
+
+model Match {
+  id                   String              @id @default(uuid())
+  categoryId           String              @map("category_id")
+  phaseId              String              @map("phase_id")
+  groupId              String?             @map("group_id")
+  roundType            bracket_round_type? @map("round_type")
+  matchNumber          Int?                @map("match_number")
+  teamAId              String?             @map("team_a_id")
+  teamBId              String?             @map("team_b_id")
+  winnerTeamId         String?             @map("winner_team_id")
+  scheduledAt          DateTime?           @map("scheduled_at")
+  venueName            String?             @map("venue_name") @db.VarChar(150)
+  courtName            String?             @map("court_name") @db.VarChar(100)
+  status               match_status        @default(PENDING)
+  walkoverWinnerTeamId String?             @map("walkover_winner_team_id")
+  notes                String?
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @default(now()) @updatedAt @map("updated_at")
+
+  category       Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  phase          Phase       @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  group          PhaseGroup? @relation(fields: [groupId], references: [id])
+  teamA          Team?       @relation("MatchTeamA", fields: [teamAId], references: [id])
+  teamB          Team?       @relation("MatchTeamB", fields: [teamBId], references: [id])
+  winnerTeam     Team?       @relation("MatchWinner", fields: [winnerTeamId], references: [id])
+  walkoverWinner Team?       @relation("MatchWalkoverWinner", fields: [walkoverWinnerTeamId], references: [id])
+  sets           MatchSet[]
+
+  @@unique([phaseId, matchNumber])
+  @@index([categoryId])
+  @@index([phaseId])
+  @@index([groupId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("matches")
+}
+
+model MatchSet {
+  id              String @id @default(uuid())
+  matchId         String @map("match_id")
+  setNumber       Int    @map("set_number")
+  teamAGames      Int    @map("team_a_games")
+  teamBGames      Int    @map("team_b_games")
+  tiebreakAPoints Int?   @map("tiebreak_a_points")
+  tiebreakBPoints Int?   @map("tiebreak_b_points")
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, setNumber])
+  @@index([matchId])
+  @@map("match_sets")
+}
+
+model PhaseAdvancement {
+  id             String   @id @default(uuid())
+  fromPhaseId    String   @map("from_phase_id")
+  toPhaseId      String   @map("to_phase_id")
+  sourceGroupId  String?  @map("source_group_id")
+  sourcePosition Int?     @map("source_position")
+  targetSlot     Int      @map("target_slot")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  fromPhase   Phase       @relation("FromPhase", fields: [fromPhaseId], references: [id], onDelete: Cascade)
+  toPhase     Phase       @relation("ToPhase", fields: [toPhaseId], references: [id], onDelete: Cascade)
+  sourceGroup PhaseGroup? @relation(fields: [sourceGroupId], references: [id])
+
+  @@unique([toPhaseId, targetSlot])
+  @@index([fromPhaseId])
+  @@index([toPhaseId])
+  @@map("phase_advancements")
 }
