@@ -24,32 +24,34 @@ export async function promoteToClub() {
 
   const userId = session.user.id
 
-  const existing = await prisma.club.findUnique({
-    where: { ownerUserId: userId },
-  })
-
-  if (existing) {
-    return { success: true, clubId: existing.id }
-  }
-
   const baseSlug = slugify(session.user.name || "club")
   const uniqueSuffix = userId.slice(-6)
   const slug = `${baseSlug}-${uniqueSuffix}`
 
-  const club = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     await tx.user.update({
       where: { id: userId },
       data: { role: "CLUB" },
     })
 
-    return tx.club.create({
+    const existing = await tx.club.findUnique({
+      where: { ownerUserId: userId },
+    })
+
+    if (existing) {
+      return { clubId: existing.id }
+    }
+
+    const club = await tx.club.create({
       data: {
         ownerUserId: userId,
         name: session.user.name || "Mi Club",
         slug,
       },
     })
+
+    return { clubId: club.id }
   })
 
-  return { success: true, clubId: club.id }
+  return { success: true, clubId: result.clubId }
 }

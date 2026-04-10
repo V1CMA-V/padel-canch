@@ -19,7 +19,7 @@ type SignInGoogleButtonClubProps = {
 export function SignInGoogleButtonClub({
   size = "sm",
 }: SignInGoogleButtonClubProps) {
-  const [isPending, startTransition] = useTransition()
+  const [isPending, startTransition] = useTransition()  
 
   const handleSignInWithGoogleClub = () => {
     startTransition(async () => {
