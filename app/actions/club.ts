@@ -229,10 +229,11 @@ export async function promoteToClub() {
 
     const existing = await tx.club.findUnique({
       where: { ownerUserId: userId },
+      select: { id: true, slug: true },
     })
 
     if (existing) {
-      return { clubId: existing.id }
+      return { clubId: existing.id, slug: existing.slug }
     }
 
     const club = await tx.club.create({
@@ -243,8 +244,8 @@ export async function promoteToClub() {
       },
     })
 
-    return { clubId: club.id }
+    return { clubId: club.id, slug: club.slug }
   })
 
-  return { success: true, clubId: result.clubId }
+  return { success: true, clubId: result.clubId, slug: result.slug }
 }

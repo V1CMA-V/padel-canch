@@ -10,7 +10,11 @@ export default function ClubCallbackPage() {
     if (calledRef.current) return
     calledRef.current = true
 
-    promoteToClub().then(() => {
+    promoteToClub().then((result) => {
+      if (result.slug) {
+        window.location.replace(`/clubs/${result.slug}`)
+        return
+      }
       window.location.replace("/clubs")
     })
   }, [])
