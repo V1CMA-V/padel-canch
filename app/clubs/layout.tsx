@@ -2,6 +2,7 @@ import type { NavGroup } from "@/components/layout/club-sidebar"
 import { ClubSidebar } from "@/components/layout/club-sidebar"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { IconExternalLink } from "@tabler/icons-react"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { ReactNode } from "react"
@@ -105,19 +106,39 @@ export default async function ClubLayout({ children }: ClubLayoutProps) {
     redirect("/")
   }
 
+  const club = await prisma.club.findUnique({
+    where: { ownerUserId: session.user.id },
+    select: { slug: true },
+  })
+
   return (
     <section className="container mx-auto min-h-svh px-4 py-6 md:py-8">
       <div className="mb-6 rounded-2xl border bg-linear-to-r from-primary/10 via-muted/50 to-muted/20 p-6">
-        <p className="text-xs font-semibold tracking-wide text-primary/80 uppercase">
-          Panel de club
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold text-foreground md:text-3xl">
-          Hola, {session.user.name?.split(" ")[0] ?? "club"}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">
-          Gestiona torneos, categorías, inscripciones y toda la actividad de tu
-          club desde un solo lugar.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold tracking-wide text-primary/80 uppercase">
+              Panel de club
+            </p>
+            <h1 className="mt-2 text-2xl font-semibold text-foreground md:text-3xl">
+              Hola, {session.user.name?.split(" ")[0] ?? "club"}
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">
+              Gestiona torneos, categorías, inscripciones y toda la actividad de
+              tu club desde un solo lugar.
+            </p>
+          </div>
+          {club?.slug && (
+            <a
+              href={`/c/${club.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              <IconExternalLink className="size-3.5" />
+              <span className="hidden sm:inline">Ver perfil público</span>
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
