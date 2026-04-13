@@ -1,7 +1,9 @@
 "use client"
 
+import { updateClubProfile } from "@/app/actions/club"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import * as React from "react"
 import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
@@ -33,6 +35,7 @@ import {
   InputGroupText,
   InputGroupTextarea,
 } from "@/components/ui/input-group"
+import { Club } from "@/generated/prisma/client"
 import type {
   CityResponse,
   CountryResponse,
@@ -93,11 +96,14 @@ const formSchema = z.object({
     .optional(),
 })
 
-export function ClubForm() {
+export function ClubForm({ clubProfile }: { clubProfile: Club }) {
+  const router = useRouter()
+  const [isSaving, setIsSaving] = React.useState(false)
+  const initialLogoPreviewUrl = clubProfile.logoUrl ?? ""
   const [countries, setCountries] = React.useState<CountryResponse[]>([])
   const [states, setStates] = React.useState<StateResponse[]>([])
   const [cities, setCities] = React.useState<CityResponse[]>([])
-  const [logoPreviewUrl, setLogoPreviewUrl] = React.useState("")
+  const [logoPreviewUrl, setLogoPreviewUrl] = React.useState(initialLogoPreviewUrl)
   const [logoFileName, setLogoFileName] = React.useState("")
   const [logoInputKey, setLogoInputKey] = React.useState(0)
 
@@ -111,14 +117,14 @@ export function ClubForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      address: "",
-      city: "",
-      state: "",
-      country: "",
-      phone: "",
-      website: "",
+      name: clubProfile.name,
+      description: clubProfile.description ?? "",
+      address: clubProfile.address ?? "",
+      city: clubProfile.city ?? "",
+      state: clubProfile.state ?? "",
+      country: clubProfile.country ?? "",
+      phone: clubProfile.phone ?? "",
+      website: clubProfile.website ?? "",
       logoUrl: undefined,
     },
   })
@@ -290,26 +296,31 @@ export function ClubForm() {
     }
   }, [logoPreviewUrl])
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
-    toast("Enviaste los siguientes valores:", {
-      description: (
-        <pre className="bg-code text-code-foreground mt-2 w-[320px] overflow-x-auto rounded-md p-4">
-          <code>{JSON.stringify(data, null, 2)}</code>
-        </pre>
-      ),
-      position: "bottom-right",
-      classNames: {
-        content: "flex flex-col gap-2",
-      },
-      style: {
-        "--border-radius": "calc(var(--radius)  + 4px)",
-      } as React.CSSProperties,
-    })
+  async function onSubmit(data: z.infer<typeof formSchema>) {
+    setIsSaving(true)
+
+    try {
+      const { logoUrl: _ignored, ...profileData } = data
+      void _ignored
+      const result = await updateClubProfile(profileData)
+
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+
+      toast.success("Informacion del club actualizada correctamente.")
+      router.refresh()
+    } catch {
+      toast.error("Ocurrio un error al guardar los cambios.")
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   function handleLogoChange(
     event: React.ChangeEvent<HTMLInputElement>,
-    onChange: (value: string) => void
+    onChange: (value: File | undefined) => void
   ) {
     const file = event.target.files?.[0]
 
@@ -317,9 +328,9 @@ export function ClubForm() {
       if (logoPreviewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(logoPreviewUrl)
       }
-      setLogoPreviewUrl("")
+      setLogoPreviewUrl(initialLogoPreviewUrl)
       setLogoFileName("")
-      onChange("")
+      onChange(undefined)
       return
     }
 
@@ -330,21 +341,21 @@ export function ClubForm() {
     const nextPreviewUrl = URL.createObjectURL(file)
     setLogoPreviewUrl(nextPreviewUrl)
     setLogoFileName(file.name)
-    onChange(nextPreviewUrl)
+    onChange(file)
   }
 
   function handleReset() {
     if (logoPreviewUrl.startsWith("blob:")) {
       URL.revokeObjectURL(logoPreviewUrl)
     }
-    setLogoPreviewUrl("")
+    setLogoPreviewUrl(initialLogoPreviewUrl)
     setLogoFileName("")
     setLogoInputKey((prev) => prev + 1)
     form.reset()
   }
 
   return (
-    <Card className="w-full max-w-2xl">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle>Informacion del club</CardTitle>
         <CardDescription>Ingresa la informacion de tu club.</CardDescription>
@@ -362,7 +373,7 @@ export function ClubForm() {
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="club-logo">Logo</FieldLabel>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                       {logoPreviewUrl ? (
                         <Image
                           src={logoPreviewUrl}
@@ -377,7 +388,7 @@ export function ClubForm() {
                           Logo
                         </div>
                       )}
-                      <InputGroup className="flex-1">
+                      <InputGroup className="w-full flex-1">
                         <InputGroupInput
                           key={logoInputKey}
                           name={field.name}
@@ -665,8 +676,8 @@ export function ClubForm() {
         <Button type="button" variant="outline" onClick={handleReset}>
           Reiniciar
         </Button>
-        <Button type="submit" form="club-form">
-          Enviar
+        <Button type="submit" form="club-form" disabled={isSaving}>
+          {isSaving ? "Guardando..." : "Guardar"}
         </Button>
       </CardFooter>
     </Card>

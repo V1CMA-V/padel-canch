@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import Link from "next/link"
 import { SignInGoogleButtonClub } from "../auth/sign-in-google-button-club"
+import { ThemeToggle } from "../themeToggle"
 
 export async function Header() {
   const session = await auth.api.getSession({
@@ -17,20 +18,23 @@ export async function Header() {
           Padel Canch
         </Link>
 
-        {session?.user ? (
-          <NavUser
-            user={{
-              name: session.user.name ?? "Usuario",
-              email: session.user.email ?? "",
-              avatar: session.user.image ?? "",
-            }}
-          />
-        ) : (
-          <div className="flex items-center gap-2">
-            <SignInGoogleButton />
-            <SignInGoogleButtonClub />
-          </div>
-        )}
+        <>
+          <ThemeToggle />
+          {session?.user ? (
+            <NavUser
+              user={{
+                name: session.user.name ?? "Usuario",
+                email: session.user.email ?? "",
+                avatar: session.user.image ?? "",
+              }}
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <SignInGoogleButton />
+              <SignInGoogleButtonClub />
+            </div>
+          )}
+        </>
       </div>
     </header>
   )
