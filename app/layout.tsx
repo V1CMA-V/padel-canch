@@ -1,13 +1,18 @@
-import { Geist, Geist_Mono, DM_Sans, Noto_Serif, Noto_Sans } from "next/font/google"
+import { Geist_Mono, Noto_Sans, Noto_Serif } from "next/font/google"
 
-import "./globals.css"
+import { Header } from "@/components/layout/header"
 import { ThemeProvider } from "@/components/theme-provider"
-import { cn } from "@/lib/utils";
-import { Header } from "@/components/layout/header";
+import { Toaster } from "@/components/ui/sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
+import "./globals.css"
 
-const notoSerifHeading = Noto_Serif({subsets:['latin'],variable:'--font-heading'});
+const notoSerifHeading = Noto_Serif({
+  subsets: ["latin"],
+  variable: "--font-heading",
+})
 
-const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-sans'})
+const notoSans = Noto_Sans({ subsets: ["latin"], variable: "--font-sans" })
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
@@ -21,15 +26,24 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="es"
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", notoSans.variable, notoSerifHeading.variable)}
+      className={cn(
+        "antialiased",
+        fontMono.variable,
+        "font-sans",
+        notoSans.variable,
+        notoSerifHeading.variable
+      )}
     >
       <body>
-        <ThemeProvider>
-          <Header />
-          {children}
-        </ThemeProvider>
+        <TooltipProvider>
+          <ThemeProvider>
+            <Header />
+            {children}
+            <Toaster position="bottom-right" />
+          </ThemeProvider>
+        </TooltipProvider>
       </body>
     </html>
   )

@@ -1,4 +1,5 @@
 import { SignInGoogleButton } from "@/components/auth/sign-in-google-button"
+import { NavUser } from "@/components/layout/nav-user"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import Link from "next/link"
@@ -17,9 +18,13 @@ export async function Header() {
         </Link>
 
         {session?.user ? (
-          <span className="text-sm text-muted-foreground">
-            {session.user.name || session.user.email}
-          </span>
+          <NavUser
+            user={{
+              name: session.user.name ?? "Usuario",
+              email: session.user.email ?? "",
+              avatar: session.user.image ?? "",
+            }}
+          />
         ) : (
           <div className="flex items-center gap-2">
             <SignInGoogleButton />

@@ -1,4 +1,4 @@
-import { ClubForm } from "@/components/forms/club"
+import { ClubForm } from "@/components/forms/clubInfo"
 
 export default function ClubsPage() {
   return (

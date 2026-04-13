@@ -14,4 +14,15 @@ export const auth = betterAuth({
       prompt: "select_account",
     },
   },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          await prisma.playerProfile.create({
+            data: { userId: user.id },
+          });
+        },
+      },
+    },
+  },
 });
