@@ -15,7 +15,7 @@ export function SignInGoogleButton({ size = "sm" }: SignInGoogleButtonProps) {
     startTransition(async () => {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/",
+        callbackURL: "/auth/role-callback",
       });
     });
   };
