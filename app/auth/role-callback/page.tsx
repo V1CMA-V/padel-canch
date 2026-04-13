@@ -1,7 +1,7 @@
-import { headers } from "next/headers"
-import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
 
 export default async function RoleCallbackPage() {
   const session = await auth.api.getSession({
@@ -17,13 +17,19 @@ export default async function RoleCallbackPage() {
     select: { role: true },
   })
 
-  if (user?.role === "CLUB") {
+  if (!user) {
+    redirect("/sign-in")
+  }
+
+  if (user.role === "CLUB") {
     redirect("/clubs")
   }
 
-  if (user?.role === "PLAYER") {
-    redirect("/player")
-  }
+  await prisma.playerProfile.upsert({
+    where: { userId: session.user.id },
+    update: {},
+    create: { userId: session.user.id },
+  })
 
-  redirect("/")
+  redirect("/player")
 }

@@ -11,7 +11,7 @@ export default function ClubCallbackPage() {
     calledRef.current = true
 
     promoteToClub().then(() => {
-      window.location.replace("/")
+      window.location.replace("/clubs")
     })
   }, [])
 

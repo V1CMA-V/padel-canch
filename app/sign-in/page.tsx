@@ -11,7 +11,7 @@ export default function SignInPage() {
     startTransition(async () => {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/",
+        callbackURL: "/auth/role-callback",
       });
     });
   };
