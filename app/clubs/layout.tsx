@@ -1,5 +1,5 @@
-import { ClubSidebar } from "@/components/layout/club-sidebar"
 import type { NavGroup } from "@/components/layout/club-sidebar"
+import { ClubSidebar } from "@/components/layout/club-sidebar"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { headers } from "next/headers"
@@ -31,12 +31,12 @@ const clubNavGroups: NavGroup[] = [
         iconKey: "tournaments",
         description: "Crea y administra torneos.",
       },
-      {
-        href: "/clubs/categories",
-        label: "Categorías",
-        iconKey: "categories",
-        description: "Define categorías para tus torneos.",
-      },
+      // {
+      //   href: "/clubs/categories",
+      //   label: "Categorías",
+      //   iconKey: "categories",
+      //   description: "Define categorías para tus torneos.",
+      // },
       {
         href: "/clubs/registrations",
         label: "Inscripciones",
