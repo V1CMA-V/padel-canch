@@ -234,9 +234,6 @@ model Tournament {
   description         String?
   venueName           String?               @map("venue_name") @db.VarChar(150)
   venueAddress        String?               @map("venue_address") @db.VarChar(255)
-  city                String?               @db.VarChar(100)
-  state               String?               @db.VarChar(100)
-  country             String?               @db.VarChar(100)
   startDate           DateTime              @map("start_date") @db.Date
   endDate             DateTime              @map("end_date") @db.Date
   registrationOpenAt  DateTime?             @map("registration_open_at")
